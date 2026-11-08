@@ -1,0 +1,33 @@
+name: Headphone prototype tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: headphone-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  flutter:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Read Flutter version
+        id: sdk
+        run: echo "version=$(cat .flutter-version)" >> "$GITHUB_OUTPUT"
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          flutter-version: ${{ steps.sdk.outputs.version }}
+          channel: stable
+          cache: true
+      - run: flutter pub get --enforce-lockfile
+      - run: dart format --output=none --set-exit-if-changed lib/widgets/headphone_output_tile.dart tests/headphone_output_test.dart
+      - run: flutter analyze --no-pub lib/widgets/headphone_output_tile.dart tests/headphone_output_test.dart
+      - run: flutter analyze --no-pub --no-fatal-infos --no-fatal-warnings lib/screens/settings_screen.dart
+      - run: flutter test --no-pub tests/headphone_output_test.dart
